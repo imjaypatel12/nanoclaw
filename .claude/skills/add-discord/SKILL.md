@@ -1,3 +1,8 @@
+---
+name: add-discord
+description: Add Discord as a channel. Can replace WhatsApp entirely or run alongside it. Bot listens in registered channels, supports text, attachments, replies, and @mentions.
+---
+
 # Add Discord Channel
 
 This skill adds Discord support to NanoClaw using the skills engine for deterministic code changes, then walks through interactive setup.

@@ -90,7 +90,7 @@ async function syncGroups(projectRoot: string): Promise<void> {
   let syncOk = false;
   try {
     const syncScript = `
-import makeWASocket, { useMultiFileAuthState, makeCacheableSignalKeyStore, Browsers } from '@whiskeysockets/baileys';
+import makeWASocket, { useMultiFileAuthState, makeCacheableSignalKeyStore, Browsers, fetchLatestBaileysVersion } from '@whiskeysockets/baileys';
 import pino from 'pino';
 import path from 'path';
 import fs from 'fs';
@@ -113,6 +113,7 @@ const upsert = db.prepare(
   'INSERT INTO chats (jid, name, last_message_time) VALUES (?, ?, ?) ON CONFLICT(jid) DO UPDATE SET name = excluded.name'
 );
 
+const { version } = await fetchLatestBaileysVersion();
 const { state, saveCreds } = await useMultiFileAuthState(authDir);
 
 const sock = makeWASocket({
@@ -120,6 +121,7 @@ const sock = makeWASocket({
   printQRInTerminal: false,
   logger,
   browser: Browsers.macOS('Chrome'),
+  version,
 });
 
 const timeout = setTimeout(() => {
@@ -152,21 +154,30 @@ sock.ev.on('connection.update', async (update) => {
     }
   } else if (update.connection === 'close') {
     clearTimeout(timeout);
-    console.error('CONNECTION_CLOSED');
+    const statusCode = update.lastDisconnect?.error?.output?.statusCode;
+    console.error('CONNECTION_CLOSED:' + statusCode + ':' + JSON.stringify(update.lastDisconnect?.error?.message));
     process.exit(1);
   }
 });
 `;
 
-    const output = execSync(
-      `node --input-type=module -e ${JSON.stringify(syncScript)}`,
-      {
+    const tmpScript = path.join(projectRoot, '.tmp-sync-groups.mjs');
+    fs.writeFileSync(tmpScript, syncScript);
+    let output: string;
+    try {
+      output = execSync(`node ${tmpScript}`, {
         cwd: projectRoot,
         encoding: 'utf-8',
         timeout: 45000,
         stdio: ['ignore', 'pipe', 'pipe'],
-      },
-    );
+      });
+    } finally {
+      try {
+        fs.unlinkSync(tmpScript);
+      } catch {
+        // ignore
+      }
+    }
     syncOk = output.includes('SYNCED:');
     logger.info({ output: output.trim() }, 'Sync output');
   } catch (err) {
