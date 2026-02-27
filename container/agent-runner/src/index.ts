@@ -455,8 +455,8 @@ async function runQuery(
           args: ['-y', '@gongrzhe/server-gmail-autoauth-mcp'],
         },
         gdrive: {
-          command: 'npx',
-          args: ['-y', '@modelcontextprotocol/server-gdrive'],
+          command: 'sh',
+          args: ['-c', 'node /app/src/refresh-gdrive.mjs && npx -y @modelcontextprotocol/server-gdrive'],
           env: {
             GDRIVE_CREDENTIALS_PATH: '/home/node/.gdrive-mcp/credentials.json',
             GDRIVE_OAUTH_PATH: '/home/node/.gdrive-mcp/gcp-oauth.keys.json',
